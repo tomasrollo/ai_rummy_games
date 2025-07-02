@@ -1,0 +1,261 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Setup Project Repository",
+        "description": "Initialize the Python project using uv, configure project structure and install required dependencies.",
+        "details": "- Create Git repository\n- Initialize uv with `uv init`\n- Add dependencies to pyproject.toml with `uv add`: `rich`\n- Create directory structure: tests/, docs/",
+        "testStrategy": "Verify that pyproject.toml exists with correct dependencies; confirm project structure files and directories",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Implement Card and Deck Models",
+        "description": "Create Card and Deck classes supporting two decks plus printed jokers, shuffling, drawing, and discarding.",
+        "details": "- Define `Card` dataclass with suit, rank, is_joker flag\n- Define `Deck` class that on init builds 108 cards: two standard decks + 4 jokers\n- Implement `shuffle()` using `random.shuffle`\n- Implement `draw()` to pop from draw_pile; `discard(card)` to push to discard_pile\n- Maintain separate draw_pile and discard_pile lists",
+        "testStrategy": "Write pytest unit tests: deck size=108, shuffle changes order, drawing reduces draw_pile and returns Card, discarding adds to discard_pile",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define Card dataclass",
+            "description": "Create a Python dataclass for Card with fields for suit, rank, and is_joker flag",
+            "dependencies": [],
+            "details": "Use `@dataclass` from Python’s `dataclasses` module. Define attributes: `suit: str`, `rank: str`, `is_joker: bool = False`. Implement a `__repr__` or `__str__` for clear debug output.",
+            "status": "done",
+            "testStrategy": "Instantiate cards for each suit/rank and a joker; assert attribute values and string representation."
+          },
+          {
+            "id": 2,
+            "title": "Implement Deck initialization",
+            "description": "Build Deck class that initializes two standard 52-card decks plus four jokers into draw and discard piles",
+            "dependencies": [
+              1
+            ],
+            "details": "In `__init__`, import Card class. Generate suits [\"Hearts\",\"Diamonds\",\"Clubs\",\"Spades\"] and ranks [\"A\",\"2\",…\"K\"]. Loop twice to create 104 Card instances, then add 4 jokers with `is_joker=True`. Assign all to `self.draw_pile` and set `self.discard_pile=[]`.",
+            "status": "done",
+            "testStrategy": "After init, assert `len(draw_pile)==108`, check exactly four cards have `is_joker=True`, and discard_pile is empty."
+          },
+          {
+            "id": 3,
+            "title": "Add shuffle method",
+            "description": "Implement `shuffle()` on Deck to randomize the draw pile",
+            "dependencies": [
+              2
+            ],
+            "details": "Import Python’s `random` module. In `shuffle()`, call `random.shuffle(self.draw_pile)`. Optionally accept a `seed` parameter to seed the RNG before shuffle for reproducible tests.",
+            "status": "done",
+            "testStrategy": "Seed RNG, call shuffle twice, assert order changes only when seed differs; verify all cards still present."
+          },
+          {
+            "id": 4,
+            "title": "Implement draw method",
+            "description": "Add `draw()` method to remove and return the top card from the draw pile",
+            "dependencies": [
+              3
+            ],
+            "details": "In `draw()`, check if `self.draw_pile` is non-empty. Use `pop()` to remove the last element and return it. If empty, raise an exception or return `None` per design.",
+            "status": "done",
+            "testStrategy": "Draw known number of cards, assert returned cards match expected and draw_pile size decrements. Test empty pile behavior."
+          },
+          {
+            "id": 5,
+            "title": "Implement discard method",
+            "description": "Add `discard(card)` to add a card to the discard pile",
+            "dependencies": [
+              4
+            ],
+            "details": "In `discard(card)`, append the passed `Card` object to `self.discard_pile`. Ensure card origin isn’t re-added to draw_pile. Optionally log or validate the card instance.",
+            "status": "done",
+            "testStrategy": "After drawing a card, discard it and assert `discard_pile` contains that instance and its length increments."
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Implement Player and GameState Models",
+        "description": "Define Player and GameState data models to track players, hands, turn state, melds, piles, and round counters.",
+        "details": "- `Player` class with name, hand:list[Card], has_declared:bool\n- `Meld` class with type (sequence/set), cards:list[Card]\n- `GameState` class with players:list[Player], draw_pile, discard_pile, melds_on_table:list[Meld], current_round:int, current_player_index:int\n- Methods to serialize/deserialize state for debugging",
+        "testStrategy": "Unit tests: instantiate a GameState with 3 players, verify defaults: round=1, no melds, hands empty, piles empty",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Player Model",
+            "description": "Define the Player class with fields for player name, hand of cards, and declaration status, plus methods to manage the hand and declaration.",
+            "dependencies": [],
+            "details": "Use a Python dataclass or class structure. Include attributes: name: str, hand: List[Card] default empty list, has_declared: bool default False. Implement methods add_card(card: Card), remove_card(card: Card) with error on missing card, and declare(): sets has_declared to True.",
+            "status": "done",
+            "testStrategy": "Write unit tests to add and remove cards from hand and validate exception on removing non-existent cards. Test that declare() sets has_declared to True."
+          },
+          {
+            "id": 2,
+            "title": "Implement Meld Model",
+            "description": "Create the Meld class to represent a sequence or set of cards and validate meld integrity.",
+            "dependencies": [],
+            "details": "Use a Python dataclass with fields type: Literal['sequence','set'], cards: List[Card]. Implement a method is_valid() that checks: for 'sequence', cards form a consecutive run of same suit; for 'set', cards have identical rank but different suits.",
+            "status": "done",
+            "testStrategy": "Write tests for is_valid() using valid and invalid sequences and sets, asserting correct Boolean output."
+          },
+          {
+            "id": 3,
+            "title": "Implement GameState Model",
+            "description": "Define the GameState class with fields to track players, draw/discard piles, melds on table, current round, and current player index.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Use a dataclass or class structure. Attributes: players: List[Player], draw_pile: List[Card], discard_pile: List[Card], melds_on_table: List[Meld], current_round: int default 1, current_player_index: int default 0. Implement methods next_turn() to advance current_player_index and increment current_round after a full cycle, add_player(player: Player), remove_player(player_name: str).",
+            "status": "done",
+            "testStrategy": "Test initial state values, next_turn() cycles through players and advances round correctly, and add/remove player updates players list appropriately."
+          },
+          {
+            "id": 4,
+            "title": "Add Serialization/Deserialization",
+            "description": "Implement to_dict() and from_dict() methods for Player, Meld, and GameState to support JSON serialization and debugging.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "For each class, implement a to_dict() method that converts all attributes to JSON-serializable primitives and a @classmethod from_dict(data: dict) that reconstructs the instance. Use recursion to serialize nested objects.",
+            "status": "done",
+            "testStrategy": "Perform round-trip serialization tests: obj → dict → obj and assert equality of key fields for Player, Meld, and GameState instances."
+          },
+          {
+            "id": 5,
+            "title": "Write Comprehensive Unit Tests",
+            "description": "Create end-to-end tests covering model initialization, methods, validation logic, and serialization workflows.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Set up a test suite using pytest or unittest. Include fixtures for Card instances. Write tests for Player methods, Meld.is_valid(), GameState methods, and serialization round trips. Ensure edge cases (empty hands, invalid melds) are covered.",
+            "status": "done",
+            "testStrategy": "Run test suite to verify 100% coverage of new model code, assert expected exceptions and state transitions."
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Implement CLI Interface Skeleton",
+        "description": "Set up the basic command-line interface using Typer and Rich to handle user input and output formatting.",
+        "details": "- Create `main.py` with Typer app\n- Define entry command `start`\n- Use Rich Console for styled prompts\n- Stub functions for: enter player names, show menus, display hands",
+        "testStrategy": "Manual test: run `python -m src.main start`, verify prompts appear; write a smoke test script that simulates inputs via subprocess",
+        "priority": "medium",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Implement Game Setup Logic",
+        "description": "Build the flow to start game: prompt for player count and names, shuffle deck, deal cards, initialize piles and starting player.",
+        "details": "- In CLI handler: ask for 2–6 players, collect names\n- Initialize Deck, call shuffle()\n- Deal 13 cards to each Player.hand\n- Move remaining to GameState.draw_pile, flip top card to discard_pile\n- Randomly select starting player index\n- Set GameState.current_round=1",
+        "testStrategy": "Simulate a game setup: verify each player has 13 cards, draw_pile size=108-13*players-1, discard_pile size=1, starting player index in range",
+        "priority": "high",
+        "dependencies": [
+          2,
+          3,
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Implement Turn and Round Management",
+        "description": "Create the main game loop enforcing draw, review, and discard phases; track rounds and prevent declarations in rounds 1–3.",
+        "details": "- In GameState, method `play_turn()` executing:\n  - draw phase: call Deck.draw or pick from discard_pile (logic stubbed later)\n  - display hand via Rich\n  - record discard: method Deck.discard\n- After each player, increment current_player_index, if index==0 then increment current_round\n- Enforce: if current_round<4, disable declaration/extension actions in menu",
+        "testStrategy": "Unit test: simulate 4 players for 3 full rounds, ensure no declaration menu option appears; check round counter increments correctly",
+        "priority": "high",
+        "dependencies": [
+          5,
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Implement Initial Declaration Validation",
+        "description": "Enable and enforce initial declaration rules from round 4: validate 48-point minimum and at least one pure sequence.",
+        "details": "- Write Validator class with `validate_initial_declaration(player_hand, melds)->bool`\n- Compute points: use mapping for face cards and jokers\n- Detect pure sequences: sort suit groups and check consecutive runs without jokers\n- On passing, set player.has_declared=True, remove meld cards from hand, add to GameState.melds_on_table",
+        "testStrategy": "Unit tests covering: valid melds summing >=48 with pure sequence, invalid sums, missing pure sequence, jokers misuse",
+        "priority": "high",
+        "dependencies": [
+          6,
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Implement Meld and Extension Logic",
+        "description": "Allow declared players to make additional melds and extend any table melds according to rules.",
+        "details": "- Extend Validator with `validate_meld(meld)` and `validate_extension(existing_meld, added_cards)`\n- For sequences: ensure added card continues suit sequence, no wrap over Ace\n- For sets: ensure rank match, no more than 4, distinct suits\n- CLI menu for declare/extend when allowed",
+        "testStrategy": "Unit tests: extension of sequence at both ends, rejection of wrap-around, set expansion to 4, rejection beyond 4",
+        "priority": "medium",
+        "dependencies": [
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Implement Game Closure and Scoring",
+        "description": "Enable a player to close the game when finishing melds and calculate final scores.",
+        "details": "- In turn logic: detect if player's hand empty after meld/discard => close\n- On close: iterate players; for non-closer, if has_declared False => score=100+50*jokers; else sum card values\n- Jokers in meld value as substituted rank for scoring pool-hand scenario\n- Display scoreboard via Rich",
+        "testStrategy": "Integration test: simulate end-of-game scenarios: declarer closes, others various states, verify scores match PRD",
+        "priority": "high",
+        "dependencies": [
+          8,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Write Automated Test Suite",
+        "description": "Set up pytest suite covering unit and integration tests for all components.",
+        "details": "- Create tests/ directory with modules:\n  - test_card_deck.py\n  - test_player_gamestate.py\n  - test_validator.py\n  - test_gameplay_flow.py\n- Use fixtures for game setups\n- Include CI config to run tests automatically",
+        "testStrategy": "Ensure pytest passes 100% on all tests, increase coverage to >=90%; run tests locally via `pytest`",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          3,
+          6,
+          7,
+          8,
+          9
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-02T20:09:01.070Z",
+      "updated": "2025-07-02T20:29:40.094Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
