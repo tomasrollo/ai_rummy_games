@@ -447,8 +447,54 @@
         "dependencies": [
           7
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Extend Validator for new meld rules",
+            "description": "Implement validation logic for the new set of meld rules in the Validator module.",
+            "dependencies": [],
+            "details": "Update the Validator class to handle new meld combinations. Add rule checks for sequence melds, set melds, and any special conditions defined in requirements. Ensure existing tests pass.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Extend Validator for table extensions",
+            "description": "Add validation support for table extension scenarios in the Validator module.",
+            "dependencies": [
+              1
+            ],
+            "details": "Enhance Validator to validate table extensions including reserved tiles, limit checks, and extension-specific constraints. Leverage patterns from meld rule implementations.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Integrate CLI commands for declare/extend",
+            "description": "Implement CLI commands to expose declare and extend functionality to users.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Use existing CLI framework to add `declare` and `extend` commands. Map command inputs to Validator logic and output user-friendly messages. Include error handling for invalid actions.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Create unit tests for each rule branch",
+            "description": "Write comprehensive unit tests covering all new validation rule branches.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Develop test cases for new meld rules, table extensions, and CLI command flows. Ensure edge cases are covered and tests assert correct behavior and error messages.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 9,
@@ -485,7 +531,7 @@
     ],
     "metadata": {
       "created": "2025-07-02T20:09:01.070Z",
-      "updated": "2025-07-03T17:15:30.534Z",
+      "updated": "2025-07-03T18:36:24.222Z",
       "description": "Tasks for master context"
     }
   }

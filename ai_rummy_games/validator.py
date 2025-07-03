@@ -216,3 +216,105 @@ class Validator:
             gaps_needed += gap
 
         return gaps_needed <= joker_count
+
+    def validate_extension(self, existing_meld: Meld, added_cards: List[Card]) -> bool:
+        """
+        Validate extension of an existing meld with new cards.
+
+        Args:
+            existing_meld: The meld already on the table
+            added_cards: New cards to add to the meld
+
+        Returns:
+            bool: True if the extension is valid, False otherwise
+        """
+        if existing_meld.type == "sequence":
+            return self._validate_sequence_extension(existing_meld.cards, added_cards)
+        elif existing_meld.type == "set":
+            return self._validate_set_extension(existing_meld.cards, added_cards)
+        return False
+
+    def validate_new_meld(self, cards: List[Card], meld_type: str) -> bool:
+        """
+        Validate if a new meld formation is valid according to the rules.
+
+        Args:
+            cards: Cards to form the new meld
+            meld_type: Type of meld ("sequence" or "set")
+
+        Returns:
+            bool: True if the meld is valid, False otherwise
+        """
+        # Create temporary meld for validation
+        temp_meld = Meld(cards=cards, type=meld_type)
+        return self._validate_meld(temp_meld)
+
+    def _validate_sequence_extension(self, existing_cards: List[Card], added_cards: List[Card]) -> bool:
+        """
+        Validate extension of an existing sequence.
+
+        Args:
+            existing_cards: Cards already in the sequence
+            added_cards: New cards to add to the sequence
+
+        Returns:
+            bool: True if extension is valid, False otherwise
+        """
+        if not added_cards:
+            return False
+
+        # Get suit from the existing sequence
+        regular_cards = [card for card in existing_cards if not card.is_joker]
+        if not regular_cards:
+            return False
+
+        sequence_suit = regular_cards[0].suit
+
+        # Check if all added cards match the suit or are jokers
+        for card in added_cards:
+            if not card.is_joker and card.suit != sequence_suit:
+                return False
+
+        # Combine cards and check if they form a valid sequence
+        combined_cards = existing_cards + added_cards
+        return self._is_valid_sequence(combined_cards)
+
+    def _validate_set_extension(self, existing_cards: List[Card], added_cards: List[Card]) -> bool:
+        """
+        Validate extension of an existing set.
+
+        Args:
+            existing_cards: Cards already in the set
+            added_cards: New cards to add to the set
+
+        Returns:
+            bool: True if extension is valid, False otherwise
+        """
+        if not added_cards:
+            return False
+
+        # Check if the combined set would exceed 4 cards (maximum in a set)
+        if len(existing_cards) + len(added_cards) > 4:
+            return False
+
+        # Get rank from the existing set (excluding jokers)
+        regular_cards = [card for card in existing_cards if not card.is_joker]
+        if not regular_cards:
+            return False
+
+        set_rank = regular_cards[0].rank
+
+        # Check if all added cards match the rank or are jokers
+        for card in added_cards:
+            if not card.is_joker and card.rank != set_rank:
+                return False
+
+        # Combine cards and check for duplicate suits (non-joker)
+        suits_used = set()
+        for card in existing_cards + added_cards:
+            if not card.is_joker:
+                if card.suit in suits_used:
+                    return False
+                suits_used.add(card.suit)
+
+        return True
