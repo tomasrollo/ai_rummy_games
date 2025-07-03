@@ -376,8 +376,66 @@
           6,
           3
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define Validator class",
+            "description": "Create the Validator class skeleton for declaration validation",
+            "dependencies": [],
+            "details": "Set up the class file, constructor, and method stubs for validation routines",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement point-value calculations",
+            "description": "Add logic to compute point values for cards in a declaration",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement functions to sum card values according to game rules, including face cards and numeric values",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Detect pure sequences without jokers",
+            "description": "Implement algorithm to identify valid pure sequences",
+            "dependencies": [
+              1
+            ],
+            "details": "Traverse sorted cards to detect sequences of the same suit without using wildcard jokers",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Integrate validation into GameState",
+            "description": "Hook the Validator into the game's state management",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Modify GameState to call Validator during the declaration phase and handle validation results",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Write comprehensive unit tests",
+            "description": "Create tests covering all validation scenarios",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Write tests for point calculations, pure sequence detection, and integration behavior, including edge and failure cases",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 8,
@@ -427,7 +485,7 @@
     ],
     "metadata": {
       "created": "2025-07-02T20:09:01.070Z",
-      "updated": "2025-07-03T16:59:40.904Z",
+      "updated": "2025-07-03T17:15:30.534Z",
       "description": "Tasks for master context"
     }
   }

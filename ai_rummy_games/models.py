@@ -149,11 +149,12 @@ class Player:
 
 
 @dataclass
+@dataclass
 class Meld:
     """Represents a meld (sequence or set) of cards."""
 
-    type: Literal["sequence", "set"]
     cards: List[Card] = field(default_factory=list)
+    type: Literal["sequence", "set"] = "set"
 
     def is_valid(self) -> bool:
         """Check if the meld is valid according to Rummy rules.
@@ -337,6 +338,52 @@ class GameState:
             meld: The meld to add to the table.
         """
         self.melds_on_table.append(meld)
+
+    def validate_and_process_declaration(self, player_name: str, melds: List[Meld]) -> bool:
+        """
+        Validate a player's initial declaration and process it if valid.
+
+        Args:
+            player_name: Name of the player making the declaration
+            melds: List of melds the player wants to declare
+
+        Returns:
+            bool: True if declaration was valid and processed, False otherwise
+        """
+        # Import here to avoid circular imports
+        from .validator import Validator
+
+        # Find the player
+        player = None
+        for p in self.players:
+            if p.name == player_name:
+                player = p
+                break
+
+        if not player:
+            raise ValueError(f"Player '{player_name}' not found")
+
+        if player.has_declared:
+            return False  # Player has already declared
+
+        # Validate the declaration
+        validator = Validator()
+        if not validator.validate_initial_declaration(player.hand, melds):
+            return False
+
+        # Process the valid declaration
+        player.declare()
+
+        # Remove meld cards from player's hand
+        for meld in melds:
+            for card in meld.cards:
+                player.remove_card(card)
+
+        # Add melds to the table
+        for meld in melds:
+            self.add_meld_to_table(meld)
+
+        return True
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert game state to dictionary for serialization."""
