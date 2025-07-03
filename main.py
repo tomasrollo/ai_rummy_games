@@ -7,6 +7,7 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.prompt import Prompt, Confirm
 from rich.text import Text
+import random
 
 from ai_rummy_games.models import Card, Deck, Player, Meld, GameState
 
@@ -19,13 +20,13 @@ def enter_player_names() -> List[str]:
     """Prompt user to enter player names and return them as a list.
 
     Returns:
-        List of player names (2-4 players supported).
+        List of player names (2-6 players supported).
     """
     console.print("\n[bold cyan]Setting up players...[/bold cyan]")
 
     players = []
     min_players = 2
-    max_players = 4
+    max_players = 6
 
     # Get number of players
     while True:
@@ -179,6 +180,8 @@ def run_demo():
 @app.command(name="start")
 def start_game():
     """Start a new game of AI Rummy."""
+    import random
+
     console.print(Panel.fit("[bold green]🃏 Welcome to AI Rummy Games! 🃏[/bold green]", border_style="green"))
 
     # Get player names
@@ -197,19 +200,31 @@ def start_game():
     deck.shuffle()
     console.print(f"[green]Deck shuffled with {deck.cards_remaining()} cards[/green]")
 
-    # Deal initial cards (7 per player)
-    console.print("\n[cyan]Dealing 7 cards to each player...[/cyan]")
-    for _ in range(7):
+    # Deal 13 cards to each player
+    cards_per_player = 13
+    console.print(f"\n[cyan]Dealing {cards_per_player} cards to each player...[/cyan]")
+    for _ in range(cards_per_player):
         for player in game_state.players:
             card = deck.draw()
             if card:
                 player.add_card(card)
 
-    # Put one card in discard pile
+    # Set up draw and discard piles
+    # Move remaining cards to draw_pile (already in deck.draw_pile)
+    # Flip top card to discard pile
     first_discard = deck.draw()
     if first_discard:
         deck.discard(first_discard)
 
+    # Assign piles to game state
+    game_state.draw_pile = deck.draw_pile.copy()
+    game_state.discard_pile = deck.discard_pile.copy()
+
+    # Randomly select starting player
+    starting_index = random.randint(0, len(game_state.players) - 1)
+    game_state.current_player_index = starting_index
+    game_state.current_round = 1
+    console.print(f"[green]Starting player: {game_state.players[starting_index].name}[/green]")
     console.print("[green]Game setup complete![/green]")
 
     # Main game loop (stub for now)

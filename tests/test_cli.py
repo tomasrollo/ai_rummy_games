@@ -62,11 +62,20 @@ class TestEnterPlayerNames:
     @patch("main.Prompt.ask")
     def test_enter_player_names_invalid_then_valid(self, mock_prompt):
         """Test handling invalid input then valid input."""
-        mock_prompt.side_effect = ["5", "1", "2", "Alice", "Bob"]
+        # Only test invalid/duplicate/empty names after a valid player count
+        mock_prompt.side_effect = [
+            "2",  # valid (number of players)
+            "",  # invalid name (empty)
+            "Alice",  # valid name
+            "Alice",  # duplicate
+            "",  # invalid name (empty again)
+            "Bob",  # valid name
+        ]
 
         players = enter_player_names()
 
         assert players == ["Alice", "Bob"]
+        assert len(players) == 2
 
     @patch("main.Prompt.ask")
     def test_enter_player_names_duplicate_names(self, mock_prompt):

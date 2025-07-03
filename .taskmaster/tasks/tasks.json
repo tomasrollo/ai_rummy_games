@@ -229,8 +229,73 @@
           3,
           4
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Prompt for Player Count",
+            "description": "Display a prompt to the user or UI to select the number of players for the game",
+            "dependencies": [],
+            "details": "Implement an input dialog or form field to collect player count; validate that the count falls within allowed range (e.g., 2–6)",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Collect Player Names",
+            "description": "Prompt for and store each player’s name based on the selected player count",
+            "dependencies": [
+              1
+            ],
+            "details": "Iterate from 1 to playerCount, display input fields or prompts for each player’s name, trim and store the names in an array",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Initialize and Shuffle Deck",
+            "description": "Create a full deck of cards and randomize their order",
+            "dependencies": [
+              2
+            ],
+            "details": "Build an array of card objects representing the full deck, then apply a Fisher-Yates or similar shuffle algorithm to randomize the array in place",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Deal Cards to Players",
+            "description": "Distribute the starting hand of cards to each player",
+            "dependencies": [
+              3
+            ],
+            "details": "Loop through each player and deal a fixed number of cards (e.g., 7) by removing cards from the top of the shuffled deck and assigning them to each player’s hand array",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Set Up Draw and Discard Piles",
+            "description": "Initialize the draw pile with remaining cards and place the first card into the discard pile",
+            "dependencies": [
+              4
+            ],
+            "details": "Assign the leftover cards from the deck to the draw pile; remove the top card from the draw pile and place it into a new discard pile array",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Select Starting Player",
+            "description": "Randomly choose which player goes first",
+            "dependencies": [
+              5
+            ],
+            "details": "Generate a random index within the range of player names array and mark that player as the starting player in game state",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 6,
@@ -244,7 +309,61 @@
           4
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Main Game Loop Structure",
+            "description": "Implement the core loop that drives turn and round progression",
+            "dependencies": [],
+            "details": "Set up a continuous loop that cycles through player turns and rounds, checks exit conditions, and transitions between game phases.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Draw Phase Logic",
+            "description": "Handle card or resource drawing at the start of each turn",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement drawing rules, replenish player hand or pool, enforce maximum hand size, and trigger any associated events.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Display and Discard Phase",
+            "description": "Present drawn items and process discards",
+            "dependencies": [
+              2
+            ],
+            "details": "Show newly drawn cards/resources to the player, allow selection of discards if over limit, update game state and player inventory accordingly.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Round-Counter Increment Logic",
+            "description": "Advance the round count at the end of each full cycle",
+            "dependencies": [
+              3
+            ],
+            "details": "Detect completion of the final player turn in a round, increment a round counter, reset turn index, and log round transitions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Menu Option Gating for Early Rounds",
+            "description": "Restrict certain actions or menu choices during initial rounds",
+            "dependencies": [
+              4
+            ],
+            "details": "Define round-based conditions for enabling/disabling menu options, check current round before rendering menus, and enforce gating rules.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 7,
@@ -308,7 +427,7 @@
     ],
     "metadata": {
       "created": "2025-07-02T20:09:01.070Z",
-      "updated": "2025-07-03T07:40:15.799Z",
+      "updated": "2025-07-03T15:27:42.170Z",
       "description": "Tasks for master context"
     }
   }
