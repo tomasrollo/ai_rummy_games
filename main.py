@@ -115,7 +115,16 @@ def display_hand(player_name: str, cards: List[Card], show_all: bool = True) -> 
 
     for i, card in enumerate(display_cards, 1):
         card_type = "Joker" if card.is_joker else "Regular"
-        card_style = "bold red" if card.is_joker else "white"
+        # Color code suits according to traditional card colors:
+        # - Red for Hearts (♥) and Diamonds (♦)
+        # - White/Black for Spades (♠) and Clubs (♣)
+        # This ensures proper visual distinction of suits in terminal
+        if card.is_joker:
+            card_style = "bold red"
+        elif card.suit in ["Hearts", "Diamonds"]:
+            card_style = "bold red"
+        else:
+            card_style = "bold white"
         table.add_row(str(i), f"[{card_style}]{str(card)}[/{card_style}]", card_type)
 
     if not show_all and len(cards) > 3:

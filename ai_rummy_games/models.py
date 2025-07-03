@@ -7,17 +7,37 @@ import random
 
 @dataclass
 class Card:
-    """Represents a playing card with suit, rank, and joker status."""
+    """Represents a playing card with suit, rank, and joker status.
+
+    Cards are displayed with pictogram symbols for suits:
+    - Spades: ♠
+    - Clubs: ♣
+    - Diamonds: ♦
+    - Hearts: ♥
+
+    Example string representation: "A♠" (Ace of Spades), "10♥" (Ten of Hearts)
+    """
 
     suit: str
     rank: str
     is_joker: bool = False
 
+    # Suit pictogram mapping (Unicode symbols for standard playing card suits)
+    # These symbols should render correctly in all modern UTF-8 compatible terminals
+    SUIT_SYMBOLS = {
+        "Spades": "♠",  # U+2660 BLACK SPADE SUIT
+        "Clubs": "♣",  # U+2663 BLACK CLUB SUIT
+        "Diamonds": "♦",  # U+2666 BLACK DIAMOND SUIT
+        "Hearts": "♥",  # U+2665 BLACK HEART SUIT
+    }
+
     def __str__(self) -> str:
         """String representation of the card."""
         if self.is_joker:
             return "Joker"
-        return f"{self.rank} of {self.suit}"
+        # Use pictogram for suit if available, otherwise use the original suit name
+        suit_symbol = self.SUIT_SYMBOLS.get(self.suit, self.suit)
+        return f"{self.rank}{suit_symbol}"
 
     def __repr__(self) -> str:
         """Detailed representation of the card."""
@@ -34,9 +54,15 @@ class Card:
 
 
 class Deck:
-    """Represents a deck of cards for Rummy with two standard decks plus jokers."""
+    """Represents a deck of cards for Rummy with two standard decks plus jokers.
 
+    While suits are stored as string names internally, they are displayed
+    using Unicode pictogram symbols (♥, ♦, ♣, ♠) in the user interface.
+    """
+
+    # Use suit names for internal representation, but display as pictograms
     SUITS = ["Hearts", "Diamonds", "Clubs", "Spades"]
+    # Suit pictograms in display: Hearts (♥), Diamonds (♦), Clubs (♣), Spades (♠)
     RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]
 
     def __init__(self):

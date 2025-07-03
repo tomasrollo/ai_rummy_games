@@ -579,7 +579,7 @@
           8,
           9
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -587,7 +587,7 @@
             "description": "Create the directory structure for tests and add fixture files to support automated testing.",
             "dependencies": [],
             "details": "Initialize a dedicated test folder, add sample data or mock JSON files as fixtures, install testing libraries (e.g., Jest or Mocha), and configure basic test runner settings.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -598,7 +598,7 @@
               1
             ],
             "details": "Write test cases for utility functions, game engine logic, and data processing modules; include assertions for expected outputs and handle edge cases; mock any external dependencies.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -609,7 +609,7 @@
               2
             ],
             "details": "Use the test runner to launch the full application or key components in sequence, simulate player actions and interactions, validate state changes and outputs across module boundaries.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -622,15 +622,86 @@
               3
             ],
             "details": "Integrate the test commands into a CI service (e.g., GitHub Actions, CircleCI), configure the workflow to install dependencies, execute tests, and report results on pull requests and merges.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Replace literal suit names with pictogram symbols in card display",
+        "description": "Refactor the card display logic so that all card suits are shown using pictogram symbols (♠︎, ♣︎, ♦︎, ❤︎) instead of their literal names.",
+        "details": "1. Update the Card class (Task 3) __str__ and __repr__ methods to map suit values (e.g., 'Spades', 'Clubs', 'Diamonds', 'Hearts') to their corresponding symbols. 2. Ensure that any presentation layer (CLI or Rich console prints from Task 6) uses the new Card string representation. 3. Audit all code paths that format or concatenate suit strings—this includes meld displays, hand listings, discard pile view, and score breakdowns—to use the pictogram-based representation. 4. Remove or deprecate any old suit-to-name mapping tables. 5. Update documentation/comments to reflect the new pictogram usage. 6. Where applicable, adjust Rich styling to ensure symbols render correctly on all supported terminals.",
+        "testStrategy": "• Unit tests: Verify Card.__str__ returns strings like \"A♠︎\", \"10❤︎\", etc., for all rank and suit combinations. • Integration tests: Simulate a sample game turn (using the pytest suite from Task 10) and capture console output; assert that no suit names appear and that pictogram symbols are present in hand, meld, and discard views. • Cross-terminal check: Run the game in at least two different terminal emulators to ensure symbols render without encoding errors. • Regression check: Confirm that all existing tests pass and that no functionality was broken by the refactoring.",
+        "status": "done",
+        "dependencies": [
+          3,
+          6
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement suit-to-pictogram mapping in Card class",
+            "description": "Refactor the Card class __str__ and __repr__ methods to map suit values ('Spades','Clubs','Diamonds','Hearts') to their corresponding symbols (♠, ♣, ♦, ♥).",
+            "dependencies": [],
+            "details": "Define a mapping dict SUIT_SYMBOLS = {'Spades':'♠','Clubs':'♣','Diamonds':'♦','Hearts':'♥'}. In __str__ and __repr__, replace suit name lookups with SUIT_SYMBOLS[self.suit]. Ensure fallback for invalid suits.",
+            "status": "done",
+            "testStrategy": "Write unit tests for __str__ and __repr__ for each suit and some invalid values."
+          },
+          {
+            "id": 2,
+            "title": "Update presentation layers to use Card string representation",
+            "description": "Ensure that all CLI and Rich console output routines use the new Card.__str__ representation rather than literal suit names.",
+            "dependencies": [
+              1
+            ],
+            "details": "Search in CLI handlers and Rich print functions (Task 6 code) for direct references to card.suit or manual suit name formatting. Replace with str(card) or repr(card). Adjust formatting templates accordingly.",
+            "status": "done",
+            "testStrategy": "Run CLI commands that display hands, melds, and verify symbols appear. Add snapshot tests for Rich console output."
+          },
+          {
+            "id": 3,
+            "title": "Audit and refactor suit formatting across codebase",
+            "description": "Locate and update any code paths that format or concatenate suit strings (meld displays, hand listings, discard pile view, score breakdowns) to use pictogram symbols.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use grep or IDE search for occurrences of 'Spades','Clubs','Diamonds','Hearts'. Refactor those functions to accept Card objects or use SUIT_SYMBOLS mapping. Remove inline suit-name concatenations.",
+            "status": "done",
+            "testStrategy": "Run full integration tests covering meld display, hand listing, discard pile, and score breakdown. Add new tests if any path is missing."
+          },
+          {
+            "id": 4,
+            "title": "Remove deprecated suit-to-name mapping tables",
+            "description": "Remove or deprecate any legacy mapping tables or constants that provided suit name lookups.",
+            "dependencies": [
+              3
+            ],
+            "details": "Search for constants or dicts like SUIT_NAMES or similar. Remove their definitions and imports. Clean up any related dead code or comments.",
+            "status": "done",
+            "testStrategy": "Compile/build to ensure no missing references. Run linter to catch unused variables or imports."
+          },
+          {
+            "id": 5,
+            "title": "Update documentation and adjust Rich styling for pictograms",
+            "description": "Revise project documentation, README, and inline comments to reflect pictogram usage. Adjust Rich styling rules to ensure proper symbol rendering across supported terminals.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "In documentation files, replace suit names with symbols. Update code comments to mention symbol mapping. In Rich console settings (style definitions), ensure fonts and styles support Unicode symbols. Test on Windows, macOS, and Linux terminals.",
+            "status": "done",
+            "testStrategy": "Build documentation site and review. Launch the application on each supported OS and verify symbol rendering."
           }
         ]
       }
     ],
     "metadata": {
       "created": "2025-07-02T20:09:01.070Z",
-      "updated": "2025-07-03T18:55:52.582Z",
+      "updated": "2025-07-03T20:17:57.656Z",
       "description": "Tasks for master context"
     }
   }

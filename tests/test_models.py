@@ -24,7 +24,20 @@ class TestCard:
     def test_card_string_representation(self):
         """Test string representation of cards."""
         card = Card(suit="Spades", rank="K")
-        assert str(card) == "K of Spades"
+        assert str(card) == "K♠"
+
+        card_hearts = Card(suit="Hearts", rank="A")
+        assert str(card_hearts) == "A♥"
+
+        card_diamonds = Card(suit="Diamonds", rank="10")
+        assert str(card_diamonds) == "10♦"
+
+        card_clubs = Card(suit="Clubs", rank="2")
+        assert str(card_clubs) == "2♣"
+
+        # Test with invalid suit - should fallback to using the suit string directly
+        card_invalid = Card(suit="InvalidSuit", rank="Q")
+        assert str(card_invalid) == "QInvalidSuit"
 
         joker = Card(suit="", rank="", is_joker=True)
         assert str(joker) == "Joker"
