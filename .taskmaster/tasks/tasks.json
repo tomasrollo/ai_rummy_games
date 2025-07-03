@@ -308,7 +308,7 @@
           5,
           4
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -316,7 +316,7 @@
             "description": "Implement the core loop that drives turn and round progression",
             "dependencies": [],
             "details": "Set up a continuous loop that cycles through player turns and rounds, checks exit conditions, and transitions between game phases.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -327,7 +327,7 @@
               1
             ],
             "details": "Implement drawing rules, replenish player hand or pool, enforce maximum hand size, and trigger any associated events.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -338,7 +338,7 @@
               2
             ],
             "details": "Show newly drawn cards/resources to the player, allow selection of discards if over limit, update game state and player inventory accordingly.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -349,7 +349,7 @@
               3
             ],
             "details": "Detect completion of the final player turn in a round, increment a round counter, reset turn index, and log round transitions.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -360,7 +360,7 @@
               4
             ],
             "details": "Define round-based conditions for enabling/disabling menu options, check current round before rendering menus, and enforce gating rules.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -427,7 +427,7 @@
     ],
     "metadata": {
       "created": "2025-07-02T20:09:01.070Z",
-      "updated": "2025-07-03T15:27:42.170Z",
+      "updated": "2025-07-03T16:59:40.904Z",
       "description": "Tasks for master context"
     }
   }

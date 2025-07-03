@@ -205,16 +205,13 @@ def start_game():
     console.print(f"\n[cyan]Dealing {cards_per_player} cards to each player...[/cyan]")
     for _ in range(cards_per_player):
         for player in game_state.players:
-            card = deck.draw()
-            if card:
-                player.add_card(card)
+            player.add_card(deck.draw())
 
     # Set up draw and discard piles
     # Move remaining cards to draw_pile (already in deck.draw_pile)
     # Flip top card to discard pile
     first_discard = deck.draw()
-    if first_discard:
-        deck.discard(first_discard)
+    deck.discard(first_discard)
 
     # Assign piles to game state
     game_state.draw_pile = deck.draw_pile.copy()
@@ -227,7 +224,7 @@ def start_game():
     console.print(f"[green]Starting player: {game_state.players[starting_index].name}[/green]")
     console.print("[green]Game setup complete![/green]")
 
-    # Main game loop (stub for now)
+    # Main game loop with round/turn management
     while True:
         display_game_state(game_state, deck)
 
@@ -236,19 +233,24 @@ def start_game():
         # Show current player's hand
         display_hand(current_player.name, current_player.hand)
 
-        # Show game menu
+        # Gate the 'Declare' option for rounds < 4
         menu_options = [
             "Draw from deck",
-            "Draw from discard pile",
             "View my hand",
-            "Show melds on table",
-            "Declare (end game)",
-            "Save and quit",
         ]
+        if game_state.current_round >= 4:
+            menu_options.append("Draw from discard pile")
+            menu_options.append("Show melds on table")
+            menu_options.append("Declare")
+        menu_options.append("Save and quit")
 
         choice = show_menu(menu_options, f"{current_player.name}'s Turn")
 
-        # Handle menu choices (stub implementations)
+        # Map menu choice to action index
+        declare_option_index = 4 if game_state.current_round >= 4 else None
+        save_quit_index = 5 if game_state.current_round >= 4 else 4
+
+        # Handle menu choices
         if choice == 0:  # Draw from deck
             card = deck.draw()
             if card:
@@ -260,7 +262,6 @@ def start_game():
         elif choice == 1:  # Draw from discard pile
             top_card = deck.peek_top_discard()
             if top_card:
-                # Remove from discard pile (simplified)
                 deck.discard_pile.pop()
                 current_player.add_card(top_card)
                 console.print(f"[green]Drew from discard: {top_card}[/green]")
@@ -284,14 +285,14 @@ def start_game():
             Prompt.ask("Press Enter to continue", default="")
             continue
 
-        elif choice == 4:  # Declare
+        elif declare_option_index is not None and choice == declare_option_index:  # Declare
             if Confirm.ask(f"Are you sure {current_player.name} wants to declare?"):
                 current_player.declare()
                 console.print(f"[bold green]{current_player.name} has declared![/bold green]")
                 console.print("[yellow]Game would end here (full game logic not implemented yet)[/yellow]")
                 break
 
-        elif choice == 5:  # Save and quit
+        elif choice == save_quit_index:  # Save and quit
             console.print("[yellow]Save functionality not implemented yet[/yellow]")
             if Confirm.ask("Quit without saving?"):
                 break
@@ -315,7 +316,7 @@ def start_game():
                 except (ValueError, IndexError):
                     console.print("[red]Please enter a valid card number[/red]")
 
-        # Next turn
+        # Next turn and round management
         game_state.next_turn()
 
     console.print("\n[bold green]Thanks for playing AI Rummy Games![/bold green]")

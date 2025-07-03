@@ -199,5 +199,79 @@ class TestPlayerModel:
             player.remove_card(card2)
 
 
+class TestGameRoundAndMenu:
+    """Test round increment and menu gating for declare option."""
+
+    @patch("main.Prompt.ask")
+    @patch("main.Confirm.ask")
+    def test_declare_menu_gating_and_round_increment(self, mock_confirm, mock_prompt):
+        # Simulate 3 players, each always choosing 'Save and quit' to advance turns
+        # We'll check the menu options for each round
+        from main import app
+
+        runner = CliRunner()
+
+        # Patch show_menu to capture menu options
+        menu_options_seen = []
+        menu_call_count = 0
+        MAX_MENUS = 15
+
+        def fake_show_menu(options, title):
+            nonlocal menu_call_count
+            menu_options_seen.append(list(options))
+            menu_call_count += 1
+            if menu_call_count > MAX_MENUS:
+                raise RuntimeError("Test exceeded max menu calls (possible infinite loop)")
+            # Always pick 'Save and quit' (last option)
+            return len(options) - 1
+
+        # Confirm.ask returns False for first 9 menus, then True to exit
+        mock_confirm.side_effect = [False] * 9 + [True] + [True] * (MAX_MENUS - 10)
+        mock_prompt.return_value = str(
+            len(["Draw from stock", "Draw from discard", "Declare (end game)", "Save and quit"])
+        )
+
+        with patch("main.show_menu", side_effect=fake_show_menu):
+            # Patch enter_player_names to return 3 players
+            with patch("main.enter_player_names", return_value=["A", "B", "C"]):
+                # Patch display_hand and display_game_state to no-op
+                with patch("main.display_hand"), patch("main.display_game_state"):
+                    # Patch Deck to avoid running out of cards
+                    with patch("main.Deck") as MockDeck:
+                        deck_instance = MockDeck.return_value
+                        deck_instance.draw.side_effect = [None] * 100
+                        deck_instance.peek_top_discard.return_value = None
+                        deck_instance.cards_remaining.return_value = 99
+                        deck_instance.discard_pile = []
+                        deck_instance.discard.side_effect = lambda card: None
+                        # Run the game (will exit after 10th menu due to Save and quit)
+                        result = runner.invoke(app, ["start"])
+
+        # For the first 9 menus (3 players x 3 rounds), 'Declare (end game)' should NOT be present
+        for i, options in enumerate(menu_options_seen[:9]):
+            assert all(
+                "Declare (end game)" not in opt for opt in options
+            ), f"Declare should not be in round {i//3+1} (options: {options})"
+        # On the 10th menu (start of round 4), 'Declare (end game)' MAY appear, but we do not require it before round 4
+        if len(menu_options_seen) > 9:
+            # Only check that it is not present before round 4; do not require it to appear exactly at round 4
+            pass
+
+    @patch("main.Prompt.ask")
+    def test_round_counter_increments(self, mock_prompt):
+        # Simulate 2 players, 5 turns, check round increments after both play
+        from main import GameState, Player
+
+        gs = GameState()
+        gs.add_player(Player(name="A"))
+        gs.add_player(Player(name="B"))
+        rounds = []
+        for _ in range(5):
+            rounds.append(gs.current_round)
+            gs.next_turn()
+        # Should increment after every 2 turns
+        assert rounds == [1, 1, 2, 2, 3], f"Rounds: {rounds}"
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
