@@ -160,8 +160,62 @@
         "dependencies": [
           1
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Initialize main.py and project dependencies",
+            "description": "Create the main.py file at the project root and install required packages (Typer and Rich). Ensure virtual environment activation.",
+            "dependencies": [],
+            "details": "1. Create a virtual environment (venv). 2. Install Typer and Rich via pip. 3. Create main.py in the project root with a module docstring. 4. Add a basic if __name__ == '__main__' guard.",
+            "status": "done",
+            "testStrategy": "Verify that running 'python main.py' with no arguments exits gracefully without errors."
+          },
+          {
+            "id": 2,
+            "title": "Set up Typer application and 'start' command",
+            "description": "Initialize a Typer app instance in main.py and define the entrypoint command named 'start'.",
+            "dependencies": [
+              1
+            ],
+            "details": "1. Import Typer in main.py. 2. Create app = Typer(). 3. Add @app.command(name='start') decorator to a function start(). 4. Inside start(), add a placeholder print or pass.",
+            "status": "done",
+            "testStrategy": "Run 'python main.py start --help' and confirm Typer displays the command description and usage."
+          },
+          {
+            "id": 3,
+            "title": "Integrate Rich console for styled I/O",
+            "description": "Set up Rich Console in main.py to handle styled output and prompts throughout the CLI.",
+            "dependencies": [
+              2
+            ],
+            "details": "1. Import Console from rich.console. 2. Instantiate console = Console() at module level. 3. In the start() function, replace basic print statements with console.print(). 4. Ensure console.prompt() is available for future inputs.",
+            "status": "done",
+            "testStrategy": "Within start(), use console.print('[bold green]Test Message[/]') and confirm styled output appears when running 'python main.py start'."
+          },
+          {
+            "id": 4,
+            "title": "Implement stub for entering player names",
+            "description": "Create a function stub to prompt and collect player names using Rich console.prompt.",
+            "dependencies": [
+              3
+            ],
+            "details": "1. Define function enter_player_names() in main.py or a submodule. 2. Use console.prompt('Enter player 1 name') and console.prompt('Enter player 2 name'). 3. Return the collected names as a tuple or list. 4. Call this stub from within start() for now.",
+            "status": "done",
+            "testStrategy": "Write a simple pytest that mocks console.prompt to return sample names and assert enter_player_names() returns the expected list."
+          },
+          {
+            "id": 5,
+            "title": "Add stubs for showing menus and displaying hands",
+            "description": "Create stub functions for show_menu() and display_hand() that use Rich to format menus and card hands.",
+            "dependencies": [
+              4
+            ],
+            "details": "1. Define function show_menu(options: List[str]) that prints a numbered list using console.print(). 2. Define display_hand(player: str, cards: List[str]) that uses console.print with table or styled text. 3. Call these stubs from start() after name entry.",
+            "status": "done",
+            "testStrategy": "Mock options and cards lists in unit tests to ensure show_menu() and display_hand() run without errors and produce output to console (capture output)."
+          }
+        ]
       },
       {
         "id": 5,
@@ -254,7 +308,7 @@
     ],
     "metadata": {
       "created": "2025-07-02T20:09:01.070Z",
-      "updated": "2025-07-02T20:29:40.094Z",
+      "updated": "2025-07-03T07:40:15.799Z",
       "description": "Tasks for master context"
     }
   }

@@ -1,37 +1,203 @@
-"""Main entry point for AI Rummy Games."""
+"""AI Rummy Games - Command Line Interface."""
 
-from ai_rummy_games.models import Deck, Player, Meld, GameState, Card
+from typing import List, Optional
+import typer
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
+from rich.prompt import Prompt, Confirm
 from rich.text import Text
 
+from ai_rummy_games.models import Card, Deck, Player, Meld, GameState
 
-def main():
-    """Demonstrate the Card, Deck, Player, Meld, and GameState functionality."""
-    console = Console()
+# Initialize Rich console and Typer app
+console = Console()
+app = typer.Typer(name="ai-rummy-games", help="A command-line interface for AI Rummy Games", rich_markup_mode="rich")
 
-    console.print(Panel.fit("[bold green]AI Rummy Games - Complete Models Demo[/bold green]"))
 
-    # Create a game state with 3 players
-    console.print("\n[blue]Setting up game with 3 players...[/blue]")
+def enter_player_names() -> List[str]:
+    """Prompt user to enter player names and return them as a list.
+
+    Returns:
+        List of player names (2-4 players supported).
+    """
+    console.print("\n[bold cyan]Setting up players...[/bold cyan]")
+
+    players = []
+    min_players = 2
+    max_players = 4
+
+    # Get number of players
+    while True:
+        try:
+            num_players = int(Prompt.ask(f"How many players? ({min_players}-{max_players})", default="2"))
+            if min_players <= num_players <= max_players:
+                break
+            else:
+                console.print(f"[red]Please enter a number between {min_players} and {max_players}[/red]")
+        except ValueError:
+            console.print("[red]Please enter a valid number[/red]")
+
+    # Get player names
+    for i in range(num_players):
+        while True:
+            name = Prompt.ask(f"Enter name for Player {i + 1}")
+            if name.strip():
+                if name not in players:
+                    players.append(name.strip())
+                    break
+                else:
+                    console.print("[red]That name is already taken. Please choose a different name.[/red]")
+            else:
+                console.print("[red]Name cannot be empty. Please enter a valid name.[/red]")
+
+    console.print(f"\n[green]Players registered: {', '.join(players)}[/green]")
+    return players
+
+
+def show_menu(options: List[str], title: str = "Menu") -> int:
+    """Display a menu with numbered options and return the selected choice.
+
+    Args:
+        options: List of menu option strings.
+        title: Title for the menu.
+
+    Returns:
+        Index of the selected option (0-based).
+    """
+    console.print(f"\n[bold yellow]{title}[/bold yellow]")
+
+    table = Table(show_header=False, show_lines=False, padding=(0, 2))
+    table.add_column("Option", style="cyan", width=8)
+    table.add_column("Description", style="white")
+
+    for i, option in enumerate(options, 1):
+        table.add_row(f"[{i}]", option)
+
+    console.print(table)
+
+    while True:
+        try:
+            choice = int(Prompt.ask("Select an option")) - 1
+            if 0 <= choice < len(options):
+                return choice
+            else:
+                console.print(f"[red]Please enter a number between 1 and {len(options)}[/red]")
+        except ValueError:
+            console.print("[red]Please enter a valid number[/red]")
+
+
+def display_hand(player_name: str, cards: List[Card], show_all: bool = True) -> None:
+    """Display a player's hand of cards in a formatted table.
+
+    Args:
+        player_name: Name of the player.
+        cards: List of Card objects in the player's hand.
+        show_all: If False, only show first 3 cards with "..." indicator.
+    """
+    console.print(f"\n[bold magenta]{player_name}'s Hand ({len(cards)} cards)[/bold magenta]")
+
+    if not cards:
+        console.print("[dim]No cards in hand[/dim]")
+        return
+
+    table = Table(show_header=True, header_style="bold cyan")
+    table.add_column("#", width=4)
+    table.add_column("Card", min_width=15)
+    table.add_column("Type", width=8)
+
+    display_cards = cards if show_all else cards[:3]
+
+    for i, card in enumerate(display_cards, 1):
+        card_type = "Joker" if card.is_joker else "Regular"
+        card_style = "bold red" if card.is_joker else "white"
+        table.add_row(str(i), f"[{card_style}]{str(card)}[/{card_style}]", card_type)
+
+    if not show_all and len(cards) > 3:
+        table.add_row("...", f"[dim]+{len(cards) - 3} more cards[/dim]", "")
+
+    console.print(table)
+
+
+def display_game_state(game_state: GameState, deck: Deck) -> None:
+    """Display the current game state in a formatted way.
+
+    Args:
+        game_state: Current game state.
+        deck: Current deck state.
+    """
+    # Game info panel
+    game_info = Text()
+    game_info.append(f"Round: {game_state.current_round} | ", style="bold blue")
+    game_info.append(f"Current Player: {game_state.current_player().name} | ", style="bold green")
+    game_info.append(f"Cards Left: {deck.cards_remaining()}", style="bold yellow")
+
+    console.print(Panel(game_info, title="Game Status", border_style="blue"))
+
+    # Players summary
+    players_table = Table(show_header=True, header_style="bold magenta")
+    players_table.add_column("Player")
+    players_table.add_column("Cards")
+    players_table.add_column("Declared", justify="center")
+
+    for player in game_state.players:
+        players_table.add_row(player.name, str(player.hand_size()), "✅" if player.has_declared else "❌")
+
+    console.print(players_table)
+
+    # Melds on table
+    if game_state.melds_on_table:
+        console.print(f"\n[bold cyan]Melds on Table ({len(game_state.melds_on_table)}):[/bold cyan]")
+        for i, meld in enumerate(game_state.melds_on_table, 1):
+            cards_str = ", ".join(str(card) for card in meld.cards)
+            console.print(f"  {i}. {meld.type.title()}: {cards_str}")
+
+    # Top discard card
+    top_discard = deck.peek_top_discard()
+    if top_discard:
+        console.print(f"\n[bold yellow]Top Discard: {top_discard}[/bold yellow]")
+
+
+@app.command(name="demo")
+def run_demo():
+    """Run the models demonstration."""
+    console.print("[bold green]Running models demo...[/bold green]")
+
+    # Import and run the demo
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [sys.executable, "demo.py"], capture_output=False, cwd="/Users/tomas/Documents/projects/ai_rummy_games"
+    )
+
+    if result.returncode != 0:
+        console.print("[red]Demo failed to run[/red]")
+        raise typer.Exit(1)
+
+
+@app.command(name="start")
+def start_game():
+    """Start a new game of AI Rummy."""
+    console.print(Panel.fit("[bold green]🃏 Welcome to AI Rummy Games! 🃏[/bold green]", border_style="green"))
+
+    # Get player names
+    player_names = enter_player_names()
+
+    # Initialize game
+    console.print("\n[yellow]Initializing game...[/yellow]")
     game_state = GameState()
 
-    players = [Player(name="Alice"), Player(name="Bob"), Player(name="Carol")]
+    # Create players
+    for name in player_names:
+        game_state.add_player(Player(name=name))
 
-    for player in players:
-        game_state.add_player(player)
-
-    console.print(f"[green]Game created with {len(game_state.players)} players[/green]")
-    console.print(f"  • Current round: {game_state.current_round}")
-    console.print(f"  • Current player: {game_state.current_player().name}")
-
-    # Create and setup deck
+    # Create and shuffle deck
     deck = Deck()
     deck.shuffle()
-    console.print(f"\n[yellow]Deck shuffled with {deck.cards_remaining()} cards[/yellow]")
+    console.print(f"[green]Deck shuffled with {deck.cards_remaining()} cards[/green]")
 
-    # Deal cards to players
+    # Deal initial cards (7 per player)
     console.print("\n[cyan]Dealing 7 cards to each player...[/cyan]")
     for _ in range(7):
         for player in game_state.players:
@@ -39,97 +205,106 @@ def main():
             if card:
                 player.add_card(card)
 
-    # Display player hands
-    hands_table = Table(show_header=True, header_style="bold magenta")
-    hands_table.add_column("Player")
-    hands_table.add_column("Hand Size")
-    hands_table.add_column("Sample Cards")
-    hands_table.add_column("Declared")
+    # Put one card in discard pile
+    first_discard = deck.draw()
+    if first_discard:
+        deck.discard(first_discard)
 
-    for player in game_state.players:
-        sample_cards = ", ".join(str(card) for card in player.hand[:3])
-        if len(player.hand) > 3:
-            sample_cards += "..."
+    console.print("[green]Game setup complete![/green]")
 
-        hands_table.add_row(player.name, str(player.hand_size()), sample_cards, "Yes" if player.has_declared else "No")
+    # Main game loop (stub for now)
+    while True:
+        display_game_state(game_state, deck)
 
-    console.print(hands_table)
+        current_player = game_state.current_player()
 
-    # Create a sample meld
-    console.print("\n[cyan]Creating sample melds...[/cyan]")
+        # Show current player's hand
+        display_hand(current_player.name, current_player.hand)
 
-    # Create a sequence meld
-    sequence_cards = [Card(suit="Hearts", rank="7"), Card(suit="Hearts", rank="8"), Card(suit="Hearts", rank="9")]
-    sequence_meld = Meld(type="sequence", cards=sequence_cards)
+        # Show game menu
+        menu_options = [
+            "Draw from deck",
+            "Draw from discard pile",
+            "View my hand",
+            "Show melds on table",
+            "Declare (end game)",
+            "Save and quit",
+        ]
 
-    # Create a set meld
-    set_cards = [Card(suit="Hearts", rank="K"), Card(suit="Spades", rank="K"), Card(suit="Clubs", rank="K")]
-    set_meld = Meld(type="set", cards=set_cards)
+        choice = show_menu(menu_options, f"{current_player.name}'s Turn")
 
-    # Display meld validation
-    melds_table = Table(show_header=True, header_style="bold magenta")
-    melds_table.add_column("Meld Type")
-    melds_table.add_column("Cards")
-    melds_table.add_column("Valid")
+        # Handle menu choices (stub implementations)
+        if choice == 0:  # Draw from deck
+            card = deck.draw()
+            if card:
+                current_player.add_card(card)
+                console.print(f"[green]Drew: {card}[/green]")
+            else:
+                console.print("[red]Deck is empty![/red]")
 
-    sequence_cards_str = ", ".join(str(card) for card in sequence_cards)
-    set_cards_str = ", ".join(str(card) for card in set_cards)
+        elif choice == 1:  # Draw from discard pile
+            top_card = deck.peek_top_discard()
+            if top_card:
+                # Remove from discard pile (simplified)
+                deck.discard_pile.pop()
+                current_player.add_card(top_card)
+                console.print(f"[green]Drew from discard: {top_card}[/green]")
+            else:
+                console.print("[red]Discard pile is empty![/red]")
 
-    melds_table.add_row("Sequence", sequence_cards_str, "✅" if sequence_meld.is_valid() else "❌")
+        elif choice == 2:  # View hand
+            display_hand(current_player.name, current_player.hand)
+            Prompt.ask("Press Enter to continue", default="")
+            continue
 
-    melds_table.add_row("Set", set_cards_str, "✅" if set_meld.is_valid() else "❌")
+        elif choice == 3:  # Show melds
+            if game_state.melds_on_table:
+                console.print(f"\n[bold cyan]Melds on Table:[/bold cyan]")
+                for i, meld in enumerate(game_state.melds_on_table, 1):
+                    cards_str = ", ".join(str(card) for card in meld.cards)
+                    valid = "✅" if meld.is_valid() else "❌"
+                    console.print(f"  {i}. {meld.type.title()}: {cards_str} {valid}")
+            else:
+                console.print("[dim]No melds on table yet.[/dim]")
+            Prompt.ask("Press Enter to continue", default="")
+            continue
 
-    console.print(melds_table)
+        elif choice == 4:  # Declare
+            if Confirm.ask(f"Are you sure {current_player.name} wants to declare?"):
+                current_player.declare()
+                console.print(f"[bold green]{current_player.name} has declared![/bold green]")
+                console.print("[yellow]Game would end here (full game logic not implemented yet)[/yellow]")
+                break
 
-    # Add melds to table
-    if sequence_meld.is_valid():
-        game_state.add_meld_to_table(sequence_meld)
-    if set_meld.is_valid():
-        game_state.add_meld_to_table(set_meld)
+        elif choice == 5:  # Save and quit
+            console.print("[yellow]Save functionality not implemented yet[/yellow]")
+            if Confirm.ask("Quit without saving?"):
+                break
 
-    console.print(f"\n[green]Melds on table: {len(game_state.melds_on_table)}[/green]")
+        # Must discard a card if hand size > 7 (simplified rule)
+        if current_player.hand_size() > 7:
+            console.print(f"\n[yellow]{current_player.name} must discard a card:[/yellow]")
+            display_hand(current_player.name, current_player.hand)
 
-    # Simulate some turns
-    console.print("\n[cyan]Simulating game turns...[/cyan]")
-    turn_table = Table(show_header=True, header_style="bold magenta")
-    turn_table.add_column("Turn")
-    turn_table.add_column("Round")
-    turn_table.add_column("Current Player")
+            while True:
+                try:
+                    card_idx = int(Prompt.ask("Enter card number to discard")) - 1
+                    if 0 <= card_idx < current_player.hand_size():
+                        discarded_card = current_player.hand[card_idx]
+                        current_player.remove_card(discarded_card)
+                        deck.discard(discarded_card)
+                        console.print(f"[red]Discarded: {discarded_card}[/red]")
+                        break
+                    else:
+                        console.print(f"[red]Please enter a number between 1 and {current_player.hand_size()}[/red]")
+                except (ValueError, IndexError):
+                    console.print("[red]Please enter a valid card number[/red]")
 
-    for turn in range(1, 8):
-        turn_table.add_row(str(turn), str(game_state.current_round), game_state.current_player().name)
+        # Next turn
         game_state.next_turn()
 
-    console.print(turn_table)
-
-    # Demonstrate serialization
-    console.print("\n[yellow]Testing serialization...[/yellow]")
-
-    # Serialize the entire game state
-    game_dict = game_state.to_dict()
-    console.print("[green]✅ Game state serialized to dictionary[/green]")
-
-    # Deserialize back
-    restored_game = GameState.from_dict(game_dict)
-    console.print("[green]✅ Game state restored from dictionary[/green]")
-
-    # Verify restoration
-    assert len(restored_game.players) == len(game_state.players)
-    assert restored_game.current_round == game_state.current_round
-    console.print("[green]✅ Serialization round-trip successful[/green]")
-
-    # Player declaration demo
-    console.print("\n[cyan]Player declaration demo...[/cyan]")
-    alice = game_state.players[0]
-    alice.declare()
-    console.print(f"[green]{alice.name} has declared: {alice.has_declared}[/green]")
-
-    console.print(f"\n[blue]Demo completed! Final state:[/blue]")
-    console.print(f"  • Players: {len(game_state.players)}")
-    console.print(f"  • Round: {game_state.current_round}")
-    console.print(f"  • Melds on table: {len(game_state.melds_on_table)}")
-    console.print(f"  • Cards remaining in deck: {deck.cards_remaining()}")
+    console.print("\n[bold green]Thanks for playing AI Rummy Games![/bold green]")
 
 
 if __name__ == "__main__":
-    main()
+    app()
