@@ -242,17 +242,21 @@ def start_game():
             "Draw from deck",
             "View my hand",
         ]
-        
+
         # Options for round 4+ only
         if game_state.current_round >= 4:
             menu_options.append("Draw from discard pile")
             menu_options.append("Show melds on table")
             menu_options.append("Declare")
-            
+
             # Extension only available if player has already declared
             if current_player.has_declared:
                 menu_options.append("Extend meld")
-                
+
+                # Close option only available if player has declared and has 0-1 cards left
+                if game_state.can_player_close(current_player):
+                    menu_options.append("Close game")
+
         menu_options.append("Save and quit")
 
         choice = show_menu(menu_options, f"{current_player.name}'s Turn")
@@ -260,6 +264,15 @@ def start_game():
         # Map menu choice to action index
         declare_option_index = 4 if game_state.current_round >= 4 else None
         extend_option_index = 5 if (game_state.current_round >= 4 and current_player.has_declared) else None
+        close_option_index = (
+            6
+            if (
+                game_state.current_round >= 4
+                and current_player.has_declared
+                and game_state.can_player_close(current_player)
+            )
+            else None
+        )
         save_quit_index = len(menu_options) - 1  # Always the last option
 
         # Handle menu choices
@@ -275,7 +288,7 @@ def start_game():
             display_hand(current_player.name, current_player.hand)
             Prompt.ask("Press Enter to continue", default="")
             continue
-            
+
         elif game_state.current_round >= 4 and choice == 2:  # Draw from discard pile
             top_card = deck.peek_top_discard()
             if top_card:
@@ -300,17 +313,27 @@ def start_game():
         elif declare_option_index is not None and choice == declare_option_index:  # Declare
             if Confirm.ask(f"Are you sure {current_player.name} wants to declare?"):
                 if handle_declaration(game_state, current_player):
-                    console.print(f"[bold green]{current_player.name}'s declaration processed successfully![/bold green]")
+                    console.print(
+                        f"[bold green]{current_player.name}'s declaration processed successfully![/bold green]"
+                    )
                 else:
                     console.print("[yellow]Declaration was not processed.[/yellow]")
                     continue  # Skip discard phase if declaration failed
-                    
+
         elif extend_option_index is not None and choice == extend_option_index:  # Extend meld
             if extend_meld(game_state, current_player):
                 console.print("[green]Meld extension processed successfully![/green]")
             else:
                 console.print("[yellow]Meld extension was not processed.[/yellow]")
                 continue  # Skip discard phase if extension failed
+
+        elif close_option_index is not None and choice == close_option_index:  # Close game
+            if handle_game_closure(game_state, current_player):
+                console.print("\n[bold green]Game closed successfully![/bold green]")
+                break  # End the game loop
+            else:
+                console.print("[yellow]Game closure was not processed.[/yellow]")
+                continue  # Skip discard phase if closure failed
 
         elif choice == save_quit_index:  # Save and quit
             console.print("[yellow]Save functionality not implemented yet[/yellow]")
@@ -338,6 +361,10 @@ def start_game():
 
         # Next turn and round management
         game_state.next_turn()
+
+    if game_state.is_game_closed:
+        console.print("\n[bold green]Game has ended![/bold green]")
+        display_scoreboard(game_state)
 
     console.print("\n[bold green]Thanks for playing AI Rummy Games![/bold green]")
 
@@ -398,7 +425,11 @@ def create_meld(player: Player, round_number: int) -> Optional[Meld]:
         return None
 
     # Validate and create the meld
-    meld_type = "set" if len(selected_cards) > 2 and all(card.rank == selected_cards[0].rank for card in selected_cards) else "run"
+    meld_type = (
+        "set"
+        if len(selected_cards) > 2 and all(card.rank == selected_cards[0].rank for card in selected_cards)
+        else "run"
+    )
     meld = Meld(type=meld_type, cards=selected_cards)
 
     if validator.validate_meld(meld, player.hand):
@@ -479,17 +510,17 @@ def select_cards_from_hand(player: Player, message: str = "Select cards from you
         selection = Prompt.ask("Card selection").strip()
         if selection == "0":
             return []
-            
+
         try:
             # Parse card indices (1-based in UI, 0-based in code)
             indices = [int(idx) - 1 for idx in selection.split()]
-            
+
             # Check for valid indices
-            invalid_indices = [i+1 for i in indices if i < 0 or i >= player.hand_size()]
+            invalid_indices = [i + 1 for i in indices if i < 0 or i >= player.hand_size()]
             if invalid_indices:
                 console.print(f"[red]Invalid card numbers: {', '.join(map(str, invalid_indices))}[/red]")
                 continue
-            
+
             # Return selected cards
             selected_cards = [player.hand[i] for i in indices]
             return selected_cards
@@ -510,21 +541,22 @@ def create_new_meld(player: Player) -> Optional[Meld]:
     # Select cards for the meld
     console.print("\n[bold cyan]Create a new meld[/bold cyan]")
     selected_cards = select_cards_from_hand(player, "Select at least 3 cards for your meld")
-    
+
     if not selected_cards:
         console.print("[yellow]Meld creation cancelled[/yellow]")
         return None
-        
+
     if len(selected_cards) < 3:
         console.print("[red]A meld must contain at least 3 cards![/red]")
         return None
-        
+
     # Select meld type
     console.print("\n[bold cyan]Select meld type:[/bold cyan]")
-    meld_type = show_menu(["Sequence (consecutive cards of same suit)", 
-                           "Set (same rank, different suits)"], "Meld Type")
+    meld_type = show_menu(
+        ["Sequence (consecutive cards of same suit)", "Set (same rank, different suits)"], "Meld Type"
+    )
     meld_type_str = "sequence" if meld_type == 0 else "set"
-    
+
     # Validate the meld
     if validator.validate_new_meld(selected_cards, meld_type_str):
         return Meld(cards=selected_cards, type=meld_type_str)
@@ -534,45 +566,40 @@ def create_new_meld(player: Player) -> Optional[Meld]:
 
 
 def select_meld_from_table(game_state: GameState) -> Optional[Tuple[int, Meld]]:
-    """Prompt the player to select a meld from the table.
+    """Prompt the user to select a meld from the table.
 
     Args:
-        game_state: Current game state with melds on table
+        game_state: Current game state
 
     Returns:
-        Tuple of (meld index, meld) or None if cancelled/no melds
+        Tuple of (index, meld) or None if cancelled
     """
     if not game_state.melds_on_table:
-        console.print("[red]No melds on the table to select![/red]")
+        console.print("[yellow]No melds on the table to select.[/yellow]")
         return None
-        
-    console.print("\n[bold cyan]Select a meld from the table:[/bold cyan]")
-    
-    melds_table = Table(show_header=True, header_style="bold magenta")
-    melds_table.add_column("#", width=4)
-    melds_table.add_column("Type", width=10)
-    melds_table.add_column("Cards")
-    
+
+    console.print("\n[bold cyan]Melds on table:[/bold cyan]")
+
     for i, meld in enumerate(game_state.melds_on_table, 1):
+        meld_type = meld.type.title()
         cards_str = ", ".join(str(card) for card in meld.cards)
-        melds_table.add_row(str(i), meld.type.title(), cards_str)
-        
-    console.print(melds_table)
-    
+        console.print(f"  {i}. {meld_type}: {cards_str}")
+
+    console.print("[yellow]Enter the number of the meld you want to select (or 0 to cancel)[/yellow]")
+
     while True:
         try:
-            selection = IntPrompt.ask("Enter meld number (0 to cancel)")
-            if selection == 0:
+            meld_idx = int(Prompt.ask("Meld number")) - 1
+
+            if meld_idx == -1:  # User entered 0 to cancel
                 return None
-                
-            if 1 <= selection <= len(game_state.melds_on_table):
-                meld_index = selection - 1
-                return (meld_index, game_state.melds_on_table[meld_index])
+
+            if 0 <= meld_idx < len(game_state.melds_on_table):
+                return (meld_idx, game_state.melds_on_table[meld_idx])
             else:
                 console.print(f"[red]Please enter a number between 1 and {len(game_state.melds_on_table)}[/red]")
         except ValueError:
             console.print("[red]Please enter a valid number[/red]")
-            continue
 
 
 def extend_meld(game_state: GameState, player: Player) -> bool:
@@ -586,26 +613,26 @@ def extend_meld(game_state: GameState, player: Player) -> bool:
         True if meld was extended successfully, False otherwise
     """
     console.print("\n[bold cyan]Extend a meld on the table[/bold cyan]")
-    
+
     # Select the meld to extend
     meld_selection = select_meld_from_table(game_state)
     if not meld_selection:
         console.print("[yellow]Meld extension cancelled[/yellow]")
         return False
-        
+
     meld_index, meld = meld_selection
-    
+
     # Select cards to extend with
     console.print(f"\n[bold cyan]Selected {meld.type} meld:[/bold cyan]")
     cards_str = ", ".join(str(card) for card in meld.cards)
     console.print(f"Cards: {cards_str}")
-    
+
     # Select cards from hand to add to the meld
     added_cards = select_cards_from_hand(player, "Select cards to add to this meld")
     if not added_cards:
         console.print("[yellow]Meld extension cancelled[/yellow]")
         return False
-        
+
     # Validate the extension
     if validator.validate_extension(meld, added_cards):
         # Update the meld on the table
@@ -614,7 +641,7 @@ def extend_meld(game_state: GameState, player: Player) -> bool:
             player.remove_card(card)
             # Add cards to the meld
             meld.cards.append(card)
-        
+
         console.print("[green]Meld extended successfully![/green]")
         return True
     else:
@@ -633,7 +660,7 @@ def handle_declaration(game_state: GameState, player: Player) -> bool:
         True if declaration was successful, False otherwise
     """
     console.print("\n[bold cyan]Declaration[/bold cyan]")
-    
+
     # Initial declaration requires validation, subsequent declarations don't
     if not player.has_declared:
         console.print("[yellow]This is your INITIAL declaration.[/yellow]")
@@ -641,14 +668,14 @@ def handle_declaration(game_state: GameState, player: Player) -> bool:
     else:
         console.print("[green]You've already made your initial declaration.[/green]")
         console.print("[yellow]You can now add more melds.[/yellow]")
-    
+
     melds = []
     while True:
         meld = create_new_meld(player)
         if meld:
             melds.append(meld)
             console.print(f"[green]Added {meld.type} meld with {len(meld.cards)} cards[/green]")
-            
+
             # Ask if player wants to add more melds
             if not Confirm.ask("Add another meld?"):
                 break
@@ -657,17 +684,19 @@ def handle_declaration(game_state: GameState, player: Player) -> bool:
                 console.print("[yellow]Declaration cancelled[/yellow]")
                 return False
             break
-    
+
     if not melds:
         return False
-    
+
     # For initial declarations, validate using GameState's method
     if not player.has_declared:
         if game_state.validate_and_process_declaration(player.name, melds):
             console.print("[bold green]Initial declaration successful![/bold green]")
             return True
         else:
-            console.print("[red]Declaration invalid! Make sure you have at least 48 points and one pure sequence.[/red]")
+            console.print(
+                "[red]Declaration invalid! Make sure you have at least 48 points and one pure sequence.[/red]"
+            )
             return False
     else:
         # For subsequent declarations, just validate each meld and add to table
@@ -677,6 +706,76 @@ def handle_declaration(game_state: GameState, player: Player) -> bool:
                 player.remove_card(card)
             # Add meld to table
             game_state.add_meld_to_table(meld)
-        
+
         console.print("[green]Melds added to the table![/green]")
         return True
+
+
+def display_scoreboard(game_state: GameState) -> None:
+    """Display the final scoreboard in a formatted table.
+
+    Args:
+        game_state: The game state containing scores
+    """
+    console.print("\n[bold cyan]🏆 Final Scores 🏆[/bold cyan]")
+
+    # Create a table for the scores
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("Player", style="cyan")
+    table.add_column("Score", style="yellow", justify="right")
+    table.add_column("Status", style="green", justify="center")
+
+    # Sort players by score (lowest is best)
+    sorted_players = sorted(game_state.players, key=lambda p: p.score)
+
+    for player in sorted_players:
+        status = "🏆 Winner" if player.name == game_state.closer_name else ""
+        score_style = "bold green" if player.name == game_state.closer_name else "white"
+        table.add_row(player.name, f"[{score_style}]{player.score}[/{score_style}]", status)
+
+    console.print(table)
+
+
+def handle_game_closure(game_state: GameState, player: Player) -> bool:
+    """Handle a player's attempt to close the game.
+
+    Args:
+        game_state: Current game state
+        player: The player attempting to close the game
+
+    Returns:
+        True if game was closed successfully, False otherwise
+    """
+    if not player.has_declared:
+        console.print("[red]You must declare before closing the game![/red]")
+        return False
+
+    if player.hand_size() > 1:
+        console.print(f"[red]You need to have 0 or 1 card left to close! You have {player.hand_size()} cards.[/red]")
+        return False
+
+    # If player has exactly one card left, they need to discard it
+    if player.hand_size() == 1:
+        # Get the last card
+        last_card = player.hand[0]
+
+        # Confirm the closure
+        console.print(f"\n[bold yellow]Your last card: {last_card}[/bold yellow]")
+        if not Confirm.ask(f"[bold]Are you sure you want to close the game by discarding this card?[/bold]"):
+            return False
+
+        # Remove the card from player's hand (will be placed face down to signal closure)
+        player.remove_card(last_card)
+
+    # Close the game and calculate scores
+    if game_state.close_game(player.name):
+        console.print(f"\n[bold green]🎉 {player.name} has closed the game! 🎉[/bold green]")
+        display_scoreboard(game_state)
+        return True
+    else:
+        console.print("[red]Failed to close the game. Please try again.[/red]")
+        return False
+
+
+if __name__ == "__main__":
+    app()

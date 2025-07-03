@@ -1,7 +1,7 @@
 """Card and Deck models for the AI Rummy Games."""
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Literal, Dict, Any
+from typing import List, Optional, Literal, Dict, Any, Tuple
 import random
 
 
@@ -105,6 +105,7 @@ class Player:
     name: str
     hand: List[Card] = field(default_factory=list)
     has_declared: bool = False
+    score: int = 0  # Added score field for tracking
 
     def add_card(self, card: Card) -> None:
         """Add a card to the player's hand.
@@ -131,6 +132,14 @@ class Player:
     def declare(self) -> None:
         """Set the player's declaration status to True."""
         self.has_declared = True
+
+    def add_score(self, points: int) -> None:
+        """Add points to player's score.
+
+        Args:
+            points: The points to add to the player's score.
+        """
+        self.score += points
 
     def hand_size(self) -> int:
         """Get the number of cards in the player's hand."""
@@ -281,6 +290,9 @@ class GameState:
     melds_on_table: List[Meld] = field(default_factory=list)
     current_round: int = 1
     current_player_index: int = 0
+    is_game_closed: bool = False
+    closer_name: Optional[str] = None
+    scores: Dict[str, int] = field(default_factory=dict)
 
     def add_player(self, player: Player) -> None:
         """Add a player to the game.
@@ -385,6 +397,72 @@ class GameState:
 
         return True
 
+    def close_game(self, player_name: str) -> bool:
+        """
+        Close the game when a player has used all cards.
+
+        Args:
+            player_name: Name of the player closing the game
+
+        Returns:
+            bool: True if game was closed successfully, False otherwise
+        """
+        # Find the player
+        player = None
+        for p in self.players:
+            if p.name == player_name:
+                player = p
+                break
+
+        if not player:
+            raise ValueError(f"Player '{player_name}' not found")
+
+        # Verify player has no cards left in hand
+        if player.hand_size() > 0:
+            return False
+
+        # Import here to avoid circular imports
+        from .scorer import Scorer
+
+        # Close the game and calculate scores
+        self.is_game_closed = True
+        self.closer_name = player_name
+
+        # Calculate scores
+        scorer = Scorer()
+        self.scores = scorer.calculate_scores(self, player_name)
+
+        # Update player scores
+        for p in self.players:
+            p.add_score(self.scores.get(p.name, 0))
+
+        return True
+
+    def can_player_close(self, player: Player) -> bool:
+        """
+        Check if a player can close the game.
+
+        Args:
+            player: The player to check
+
+        Returns:
+            bool: True if player can close the game
+        """
+        # Player must have declared and have only one card left to be able to close
+        return player.has_declared and player.hand_size() <= 1
+
+    def end_game(self) -> None:
+        """End the game and determine the winner."""
+        if self.is_game_closed:
+            return
+
+        self.is_game_closed = True
+
+        # Calculate scores based on remaining cards
+        for player in self.players:
+            # Example scoring: 10 points for each card remaining
+            player.add_score(len(player.hand) * 10)
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert game state to dictionary for serialization."""
         return {
@@ -394,6 +472,7 @@ class GameState:
             "melds_on_table": [meld.to_dict() for meld in self.melds_on_table],
             "current_round": self.current_round,
             "current_player_index": self.current_player_index,
+            "is_game_closed": self.is_game_closed,
         }
 
     @classmethod

@@ -507,8 +507,62 @@
           8,
           7
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Detect Game End Condition",
+            "description": "Evaluate the current GameState to determine if end-of-game criteria are satisfied.",
+            "dependencies": [],
+            "details": "Check remaining cards, trick count, round limit, and any special termination rules to decide if the game should close.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Calculate Base Scores for Declarer and Non-Declarers",
+            "description": "Compute the initial point totals for the declarer and each non-declarer based on standard scoring rules.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use bid values, tricks taken, and contract success or failure to assign base points to each player.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Handle Joker Scoring Rules",
+            "description": "Apply special adjustments to player scores when joker cards are involved.",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement rule-specific bonuses or penalties for jokers, modify base scores accordingly, and log any overrides.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Update GameState for Closure",
+            "description": "Incorporate final scores into the GameState and mark the game as closed.",
+            "dependencies": [
+              3
+            ],
+            "details": "Set game status to closed, record end timestamp, update player score fields, and store any summary data.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Render Scoreboard with Rich",
+            "description": "Use the Rich library to display the final scoreboard in the terminal.",
+            "dependencies": [
+              4
+            ],
+            "details": "Format player names and scores in a Rich Table, apply styling, align columns, and output to the console.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 10,
@@ -526,12 +580,57 @@
           9
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set Up Test Directory and Fixtures",
+            "description": "Create the directory structure for tests and add fixture files to support automated testing.",
+            "dependencies": [],
+            "details": "Initialize a dedicated test folder, add sample data or mock JSON files as fixtures, install testing libraries (e.g., Jest or Mocha), and configure basic test runner settings.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Write Unit Tests for Core Modules",
+            "description": "Implement unit tests covering individual functions and logic in the core modules of the codebase.",
+            "dependencies": [
+              1
+            ],
+            "details": "Write test cases for utility functions, game engine logic, and data processing modules; include assertions for expected outputs and handle edge cases; mock any external dependencies.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Integration Tests for Full Gameplay Flows",
+            "description": "Develop integration tests that simulate complete gameplay scenarios to verify end-to-end functionality.",
+            "dependencies": [
+              2
+            ],
+            "details": "Use the test runner to launch the full application or key components in sequence, simulate player actions and interactions, validate state changes and outputs across module boundaries.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Configure CI Test Runner",
+            "description": "Set up a continuous integration pipeline to automatically run the test suite on each code change.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Integrate the test commands into a CI service (e.g., GitHub Actions, CircleCI), configure the workflow to install dependencies, execute tests, and report results on pull requests and merges.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2025-07-02T20:09:01.070Z",
-      "updated": "2025-07-03T18:36:24.222Z",
+      "updated": "2025-07-03T18:55:52.582Z",
       "description": "Tasks for master context"
     }
   }
