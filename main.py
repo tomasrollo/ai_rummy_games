@@ -189,17 +189,6 @@ def display_game_state(game_state: GameState, deck: Deck) -> None:
 
     console.print(Panel(game_info, title="Game Status", border_style="blue"))
 
-    # Players summary
-    players_table = Table(show_header=True, header_style="bold magenta")
-    players_table.add_column("Player")
-    players_table.add_column("Cards")
-    players_table.add_column("Declared", justify="center")
-
-    for player in game_state.players:
-        players_table.add_row(player.name, str(player.hand_size()), "✅" if player.has_declared else "❌")
-
-    console.print(players_table)
-
     # Melds on table
     if game_state.melds_on_table:
         console.print(f"\n[bold cyan]Melds on Table ({len(game_state.melds_on_table)}):[/bold cyan]")
