@@ -184,7 +184,6 @@ class Player:
 
 
 @dataclass
-@dataclass
 class Meld:
     """Represents a meld (sequence or set) of cards."""
 
