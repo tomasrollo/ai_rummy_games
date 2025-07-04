@@ -20,6 +20,44 @@ app = typer.Typer(name="ai-rummy-games", help="A command-line interface for AI R
 validator = Validator()
 
 
+def card_sort_key(card: Card):
+    """Sort key function for cards.
+
+    Sorts cards by suit (Spades, Hearts, Diamonds, Clubs) and then by rank (A, 2-10, J, Q, K)
+    Jokers are placed at the end.
+
+    Args:
+        card: The card to get a sort key for
+
+    Returns:
+        A tuple of (suit_order, rank_order) for sorting
+    """
+    if card.is_joker:
+        return (4, 0)  # Place jokers at the end
+
+    # Define suit order: Spades, Hearts, Diamonds, Clubs
+    suit_order = {"Spades": 0, "Hearts": 1, "Diamonds": 2, "Clubs": 3}
+
+    # Define rank order: A, 2, 3, ..., 10, J, Q, K
+    rank_values = {
+        "A": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 6,
+        "7": 7,
+        "8": 8,
+        "9": 9,
+        "10": 10,
+        "J": 11,
+        "Q": 12,
+        "K": 13,
+    }
+
+    return (suit_order.get(card.suit, 5), rank_values.get(card.rank, 0))
+
+
 def enter_player_names() -> List[str]:
     """Prompt user to enter player names and return them as a list.
 
@@ -106,12 +144,15 @@ def display_hand(player_name: str, cards: List[Card], show_all: bool = True) -> 
         console.print("[dim]No cards in hand[/dim]")
         return
 
+    # Create a sorted copy of the cards using the shared card_sort_key function
+    sorted_cards = sorted(cards, key=card_sort_key)
+
     table = Table(show_header=True, header_style="bold cyan")
     table.add_column("#", width=4)
     table.add_column("Card", min_width=15)
     table.add_column("Type", width=8)
 
-    display_cards = cards if show_all else cards[:3]
+    display_cards = sorted_cards if show_all else sorted_cards[:3]
 
     for i, card in enumerate(display_cards, 1):
         card_type = "Joker" if card.is_joker else "Regular"
@@ -352,19 +393,24 @@ def start_game():
         # Must discard a card if hand size > 7 (simplified rule)
         if current_player.hand_size() > 7:
             console.print(f"\n[yellow]{current_player.name} must discard a card:[/yellow]")
-            display_hand(current_player.name, current_player.hand)
+
+            # Create a sorted copy of the cards and display it
+            sorted_cards = sorted(current_player.hand, key=card_sort_key)
+            # Display the sorted cards
+            display_hand(current_player.name, sorted_cards)
 
             while True:
                 try:
                     card_idx = int(Prompt.ask("Enter card number to discard")) - 1
-                    if 0 <= card_idx < current_player.hand_size():
-                        discarded_card = current_player.hand[card_idx]
+                    if 0 <= card_idx < len(sorted_cards):
+                        # Use the card from sorted_cards, not from the original hand
+                        discarded_card = sorted_cards[card_idx]
                         current_player.remove_card(discarded_card)
                         deck.discard(discarded_card)
                         console.print(f"[red]Discarded: {discarded_card}[/red]")
                         break
                     else:
-                        console.print(f"[red]Please enter a number between 1 and {current_player.hand_size()}[/red]")
+                        console.print(f"[red]Please enter a number between 1 and {len(sorted_cards)}[/red]")
                 except (ValueError, IndexError):
                     console.print("[red]Please enter a valid card number[/red]")
 
@@ -388,6 +434,13 @@ def select_cards(player: Player, max_cards: int) -> List[Card]:
     Returns:
         List of selected Card objects.
     """
+
+    # Create a sorted copy of the cards
+    sorted_cards = sorted(player.hand, key=card_sort_key)
+
+    # Display the sorted cards
+    display_hand(player.name, sorted_cards)
+
     while True:
         try:
             card_indices = Prompt.ask(
@@ -399,10 +452,10 @@ def select_cards(player: Player, max_cards: int) -> List[Card]:
                 return []
 
             indices = [int(idx.strip()) - 1 for idx in card_indices]
-            if any(idx < 0 or idx >= len(player.hand) for idx in indices):
+            if any(idx < 0 or idx >= len(sorted_cards) for idx in indices):
                 raise ValueError("Invalid card number selected")
 
-            selected_cards = [player.hand[idx] for idx in indices]
+            selected_cards = [sorted_cards[idx] for idx in indices]
             if len(selected_cards) > max_cards:
                 console.print(f"[red]You can only select up to {max_cards} cards[/red]")
                 continue
@@ -512,7 +565,12 @@ def select_cards_from_hand(player: Player, message: str = "Select cards from you
         return []
 
     console.print(f"\n[bold cyan]{message}[/bold cyan]")
-    display_hand(player.name, player.hand)
+
+    # Create a sorted copy of the cards
+    sorted_cards = sorted(player.hand, key=card_sort_key)
+
+    # Display the sorted cards
+    display_hand(player.name, sorted_cards)
     console.print("[yellow]Enter card numbers separated by spaces (e.g. 1 3 5) or 0 to cancel[/yellow]")
 
     while True:
@@ -525,13 +583,13 @@ def select_cards_from_hand(player: Player, message: str = "Select cards from you
             indices = [int(idx) - 1 for idx in selection.split()]
 
             # Check for valid indices
-            invalid_indices = [i + 1 for i in indices if i < 0 or i >= player.hand_size()]
+            invalid_indices = [i + 1 for i in indices if i < 0 or i >= len(sorted_cards)]
             if invalid_indices:
                 console.print(f"[red]Invalid card numbers: {', '.join(map(str, invalid_indices))}[/red]")
                 continue
 
-            # Return selected cards
-            selected_cards = [player.hand[i] for i in indices]
+            # Return selected cards from sorted list
+            selected_cards = [sorted_cards[i] for i in indices]
             return selected_cards
         except ValueError:
             console.print("[red]Please enter valid card numbers[/red]")
