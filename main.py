@@ -287,132 +287,153 @@ def start_game():
         # Show current player's hand
         display_hand(current_player.name, current_player.hand)
 
-        # Gate options based on round number and player's declaration status
-        menu_options = [
-            "Draw from deck",
-            "View my hand",
-        ]
+        # --- PHASE 1: DRAW PHASE ---
+        # First, player must draw a card (either from deck or discard pile)
+        has_drawn = False
 
-        # Options for round 4+ only
-        if game_state.current_round >= 4:
-            menu_options.append("Draw from discard pile")
-            menu_options.append("Show melds on table")
-            menu_options.append("Declare")
+        while not has_drawn:
+            # Present draw options
+            draw_options = ["Draw from deck"]
+            if game_state.current_round >= 4:
+                draw_options.append("Draw from discard pile")
+            draw_options.append("View my hand")
+            draw_options.append("Save and quit")
 
-            # Extension only available if player has already declared
-            if current_player.has_declared:
-                menu_options.append("Extend meld")
+            draw_choice = show_menu(draw_options, f"{current_player.name}'s Draw Phase")
 
-                # Close option only available if player has declared and has 0-1 cards left
-                if game_state.can_player_close(current_player):
-                    menu_options.append("Close game")
-
-        menu_options.append("Save and quit")
-
-        choice = show_menu(menu_options, f"{current_player.name}'s Turn")
-
-        # Map menu choice to action index
-        declare_option_index = 4 if game_state.current_round >= 4 else None
-        extend_option_index = 5 if (game_state.current_round >= 4 and current_player.has_declared) else None
-        close_option_index = (
-            6
-            if (
-                game_state.current_round >= 4
-                and current_player.has_declared
-                and game_state.can_player_close(current_player)
-            )
-            else None
-        )
-        save_quit_index = len(menu_options) - 1  # Always the last option
-
-        # Handle menu choices
-        if choice == 0:  # Draw from deck
-            card = deck.draw()
-            if card:
-                current_player.add_card(card)
-                console.print(f"[green]Drew: {card}[/green]")
-            else:
-                console.print("[red]Deck is empty![/red]")
-
-        elif choice == 1:  # View hand
-            display_hand(current_player.name, current_player.hand)
-            Prompt.ask("Press Enter to continue", default="")
-            continue
-
-        elif game_state.current_round >= 4 and choice == 2:  # Draw from discard pile
-            top_card = deck.peek_top_discard()
-            if top_card:
-                deck.discard_pile.pop()
-                current_player.add_card(top_card)
-                console.print(f"[green]Drew from discard: {top_card}[/green]")
-            else:
-                console.print("[red]Discard pile is empty![/red]")
-
-        elif game_state.current_round >= 4 and choice == 3:  # Show melds
-            if game_state.melds_on_table:
-                console.print(f"\n[bold cyan]Melds on Table:[/bold cyan]")
-                for i, meld in enumerate(game_state.melds_on_table, 1):
-                    cards_str = ", ".join(str(card) for card in meld.cards)
-                    valid = "✅" if meld.is_valid() else "❌"
-                    console.print(f"  {i}. {meld.type.title()}: {cards_str} {valid}")
-            else:
-                console.print("[dim]No melds on table yet.[/dim]")
-            Prompt.ask("Press Enter to continue", default="")
-            continue
-
-        elif declare_option_index is not None and choice == declare_option_index:  # Declare
-            if Confirm.ask(f"Are you sure {current_player.name} wants to declare?"):
-                if handle_declaration(game_state, current_player):
-                    console.print(
-                        f"[bold green]{current_player.name}'s declaration processed successfully![/bold green]"
-                    )
+            if draw_choice == 0:  # Draw from deck
+                card = deck.draw()
+                if card:
+                    current_player.add_card(card)
+                    console.print(f"[green]Drew: {card}[/green]")
+                    has_drawn = True
                 else:
-                    console.print("[yellow]Declaration was not processed.[/yellow]")
-                    continue  # Skip discard phase if declaration failed
+                    console.print("[red]Deck is empty![/red]")
 
-        elif extend_option_index is not None and choice == extend_option_index:  # Extend meld
-            if extend_meld(game_state, current_player):
-                console.print("[green]Meld extension processed successfully![/green]")
-            else:
-                console.print("[yellow]Meld extension was not processed.[/yellow]")
-                continue  # Skip discard phase if extension failed
+            elif game_state.current_round >= 4 and draw_choice == 1:  # Draw from discard pile
+                top_card = deck.peek_top_discard()
+                if top_card:
+                    deck.discard_pile.pop()
+                    current_player.add_card(top_card)
+                    console.print(f"[green]Drew from discard: {top_card}[/green]")
+                    has_drawn = True
+                else:
+                    console.print("[red]Discard pile is empty![/red]")
 
-        elif close_option_index is not None and choice == close_option_index:  # Close game
-            if handle_game_closure(game_state, current_player):
-                console.print("\n[bold green]Game closed successfully![/bold green]")
-                break  # End the game loop
-            else:
-                console.print("[yellow]Game closure was not processed.[/yellow]")
-                continue  # Skip discard phase if closure failed
+            elif draw_choice == len(draw_options) - 2:  # View hand (always second-to-last)
+                display_hand(current_player.name, current_player.hand)
+                Prompt.ask("Press Enter to continue", default="")
 
-        elif choice == save_quit_index:  # Save and quit
-            console.print("[yellow]Save functionality not implemented yet[/yellow]")
-            if Confirm.ask("Quit without saving?"):
-                break
+            elif draw_choice == len(draw_options) - 1:  # Save and quit (always last)
+                console.print("[yellow]Save functionality not implemented yet[/yellow]")
+                if Confirm.ask("Quit without saving?"):
+                    return  # Exit the game function
 
-        # Must discard a card if hand size > 7 (simplified rule)
-        if current_player.hand_size() > 7:
-            console.print(f"\n[yellow]{current_player.name} must discard a card:[/yellow]")
+        # --- PHASE 2: ACTION PHASE ---
+        # After drawing, player can perform actions based on round/declaration status
+        game_closed = False
+        while has_drawn and not game_closed:
+            # Gate options based on round number and player's declaration status
+            action_options = ["View my hand", "End turn and discard"]
 
-            # Create a sorted copy of the cards and display it
-            sorted_cards = sorted(current_player.hand, key=card_sort_key)
-            # Display the sorted cards
-            display_hand(current_player.name, sorted_cards)
+            # Options for round 4+ only
+            if game_state.current_round >= 4:
+                action_options.insert(1, "Show melds on table")
+                action_options.insert(1, "Declare")
 
-            while True:
-                try:
-                    card_idx = int(Prompt.ask("Enter card number to discard")) - 1
-                    if 0 <= card_idx < len(sorted_cards):
-                        # Use the card from sorted_cards, not from the original hand
-                        discarded_card = sorted_cards[card_idx]
-                        current_player.remove_card(discarded_card)
-                        deck.discard(discarded_card)
-                        console.print(f"[red]Discarded: {discarded_card}[/red]")
-                        break
+                # Extension only available if player has already declared
+                if current_player.has_declared:
+                    action_options.insert(1, "Extend meld")
+
+                    # Close option only available if player has declared and has 0-1 cards left
+                    if game_state.can_player_close(current_player):
+                        action_options.insert(1, "Close game")
+
+            action_choice = show_menu(action_options, f"{current_player.name}'s Action Phase")
+
+            if action_choice == 0:  # View hand
+                display_hand(current_player.name, current_player.hand)
+                Prompt.ask("Press Enter to continue", default="")
+
+            elif action_choice == len(action_options) - 1:  # End turn and discard (always last)
+                break  # Exit the action phase loop to proceed to discard phase
+
+            elif game_state.current_round >= 4:
+                # Calculate the option indices dynamically based on declaration status
+                option_offset = 1  # Start after "View my hand"
+
+                # Close game (only present if player can close)
+                if (
+                    current_player.has_declared
+                    and game_state.can_player_close(current_player)
+                    and action_choice == option_offset
+                ):
+                    if handle_game_closure(game_state, current_player):
+                        console.print("\n[bold green]Game closed successfully![/bold green]")
+                        game_closed = True
+                        break  # Exit the action phase loop
+                    option_offset += 1
+
+                # Extend meld (only present if player has declared)
+                if current_player.has_declared and (
+                    not game_state.can_player_close(current_player)
+                    and action_choice == option_offset
+                    or game_state.can_player_close(current_player)
+                    and action_choice == option_offset
+                ):
+                    if extend_meld(game_state, current_player):
+                        console.print("[green]Meld extension processed successfully![/green]")
+                    option_offset += 1
+
+                # Declare (always present in round 4+)
+                if action_choice == option_offset:
+                    if Confirm.ask(f"Are you sure {current_player.name} wants to declare?"):
+                        if handle_declaration(game_state, current_player):
+                            console.print(
+                                f"[bold green]{current_player.name}'s declaration processed successfully![/bold green]"
+                            )
+                    option_offset += 1
+
+                # Show melds (always present in round 4+)
+                if action_choice == option_offset:
+                    if game_state.melds_on_table:
+                        console.print(f"\n[bold cyan]Melds on Table:[/bold cyan]")
+                        for i, meld in enumerate(game_state.melds_on_table, 1):
+                            cards_str = ", ".join(str(card) for card in meld.cards)
+                            valid = "✅" if meld.is_valid() else "❌"
+                            console.print(f"  {i}. {meld.type.title()}: {cards_str} {valid}")
                     else:
-                        console.print(f"[red]Please enter a number between 1 and {len(sorted_cards)}[/red]")
-                except (ValueError, IndexError):
-                    console.print("[red]Please enter a valid card number[/red]")
+                        console.print("[dim]No melds on table yet.[/dim]")
+                    Prompt.ask("Press Enter to continue", default="")
+
+        # If the game was closed, skip the discard phase and continue to next player
+        if game_closed:
+            game_state.next_turn()
+            continue
+
+        # --- PHASE 3: DISCARD PHASE ---
+        # At the end of the turn, player must discard one card
+        console.print(f"\n[yellow]{current_player.name}, you must discard a card to end your turn:[/yellow]")
+
+        # Create a sorted copy of the cards and display it
+        sorted_cards = sorted(current_player.hand, key=card_sort_key)
+        # Display the sorted cards
+        display_hand(current_player.name, sorted_cards)
+
+        while True:
+            try:
+                card_idx = int(Prompt.ask("Enter card number to discard")) - 1
+                if 0 <= card_idx < len(sorted_cards):
+                    # Use the card from sorted_cards, not from the original hand
+                    discarded_card = sorted_cards[card_idx]
+                    current_player.remove_card(discarded_card)
+                    deck.discard(discarded_card)
+                    console.print(f"[red]Discarded: {discarded_card}[/red]")
+                    break
+                else:
+                    console.print(f"[red]Please enter a number between 1 and {len(sorted_cards)}[/red]")
+            except (ValueError, IndexError):
+                console.print("[red]Please enter a valid card number[/red]")
 
         # Next turn and round management
         game_state.next_turn()
@@ -831,8 +852,11 @@ def handle_game_closure(game_state: GameState, player: Player) -> bool:
         if not Confirm.ask(f"[bold]Are you sure you want to close the game by discarding this card?[/bold]"):
             return False
 
-        # Remove the card from player's hand (will be placed face down to signal closure)
+        # Remove the card from player's hand and add to discard pile
         player.remove_card(last_card)
+        # Add the card to the discard pile
+        game_state.discard_pile.append(last_card)
+        console.print(f"[red]Discarded: {last_card}[/red]")
 
     # Close the game and calculate scores
     if game_state.close_game(player.name):
